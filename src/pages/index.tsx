@@ -8,50 +8,46 @@ import { api } from '../services/api';
 import { Loading } from '../components/Loading';
 import { Error } from '../components/Error';
 
-type FetchImageResponse = {
-  after?: {
-    id: string;
-  };
+interface FetchImagesResponse {
   data: {
+    id: string;
     title: string;
     description: string;
     url: string;
     ts: number;
-    id: string;
-  } [];
+  }[];
+  after: string | null;
 }
 
 export default function Home(): JSX.Element {
   const fetchImages = async ({
-    pageParams = null
-  }): Promise<FetchImageResponse> => {
-    const {data} = await api.get('api/images', {
+    pageParam = null,
+  }): Promise<FetchImagesResponse> => {
+    const { data } = await api.get('api/images', {
       params: {
-        after: pageParams
+        after: pageParam,
       },
     });
 
     return data;
   };
 
-  const {
-    data,
-    isLoading,
-    isError,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-  } = useInfiniteQuery('images', fetchImages, {
-    getNextPageParam: lastReq => lastReq?.after ?? null,
-  });
+  const { data, isLoading, isError, fetchNextPage, hasNextPage } =
+    useInfiniteQuery('images', fetchImages, {
+      getNextPageParam: ({ after }) => after || null,
+    });
 
   const formattedData = useMemo(() => {
-    return data?.pages.map(page => page.data).flat();
+    return data?.pages.map(imageData => imageData.data).flat();
   }, [data]);
 
-  if (isLoading) return <Loading />;
+  if (isLoading) {
+    return <Loading />;
+  }
 
-  if (isError) return <Error />;
+  if (isError) {
+    return <Error />;
+  }
 
   return (
     <>
@@ -60,12 +56,7 @@ export default function Home(): JSX.Element {
       <Box maxW={1120} px={20} mx="auto" my={20}>
         <CardList cards={formattedData} />
         {hasNextPage && (
-          <Button
-            isLoading={isFetchingNextPage}
-            loadingText="Carregando..."
-            mt="40px"
-            onClick={() => fetchNextPage()}
-          >
+          <Button my={10} onClick={() => fetchNextPage()}>
             Carregar mais
           </Button>
         )}
